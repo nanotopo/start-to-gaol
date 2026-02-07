@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>受験すごろく</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: url("bg.png") center/cover fixed;
+}
+
+/* ===== 上部バー ===== */
+.top-bar {
+  position: fixed;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 20;
+}
+
+.menu-btn {
+  font-size: 20px;
+  background: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.top-info {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.info-box {
+  background: rgba(255,255,255,0.9);
+  border-radius: 10px;
+  padding: 6px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* ===== 盤面 ===== */
+.board {
+  margin: 90px 8px 30px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(30, 1fr);
+  gap: 4px;
+  background: rgba(255,255,255,0.7);
+  border-radius: 18px;
+}
+
+.cell {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 2px solid #333;
+  background: #fff;
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  text-align: center;
+}
+
+.snake-left  { transform: translateY(-6px); }
+.snake-mid   { transform: none; }
+.snake-right { transform: translateY(6px); }
+
+.event { background: #e0f0ff; }
+.goal  { background: #c2f0c2; font-size: 12px; }
+
+.character {
+  position: absolute;
+  font-size: 14px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.month {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-weight: bold;
+  font-size: 12px;
+  margin: 8px 0 4px;
+}
+
+.balloon {
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #ff7675;
+  color: #fff;
+  font-size: 7px;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+/* ===== メニュー ===== */
+.side-menu, .setting-menu {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 85%;
+  background: #f5f5f5;
+  padding: 12px;
+  overflow-y: auto;
+  transition: bottom 0.3s, top 0.3s;
+  z-index: 30;
+}
+
+.side-menu { top: -100%; }
+.side-menu.open { top: 0; }
+
+.setting-menu {
+  bottom: -100%;
+}
+.setting-menu.open {
+  bottom: 0;
+}
+
+/* メニュー内だけ入力欄を100%にする */
+.side-menu input,
+.side-menu select,
+.side-menu button,
+.setting-menu input,
+.setting-menu select,
+.setting-menu button {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: 1px solid #999;
+}
+
+.list-item {
+  padding: 8px;
+  border-bottom: 1px solid #ccc;
+  cursor: pointer;
+}
+.list-item:hover { background: #eee; }
+
+.hidden { display: none; }
+
+/* ===== 歯車ボタン ===== */
+.gear-btn {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  font-size: 22px;
+  background: #666;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  z-index: 25;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-bar">
+  <button class="menu-btn" onclick="toggleMenu()">≡</button>
+  <div class="top-info">
+    <div class="info-box" id="infoToday"></div>
+    <div class="info-box" id="infoExam"></div>
+    <div class="info-box" id="infoLeft"></div>
+    <div class="info-box">偏差値<br><span id="scoreView"></span></div>
+  </div>
+</div>
+
+<!-- イベントメニュー -->
+<div id="sideMenu" class="side-menu">
+  <h3>イベント・マイルストーン</h3>
+  <select id="modeSelect" onchange="changeMode()">
+    <option value="add">入力</option>
+    <option value="delete">削除</option>
+  </select>
+
+  <div id="addArea">
+    <h4>イベント</h4>
+    <input type="date" id="eventDate">
+    <input type="text" id="eventType" placeholder="模試 / 休み など">
+    <button onclick="addEvent()">イベント追加</button>
+
+    <hr>
+
+    <h4>マイルストーン</h4>
+    <input type="date" id="mileDate">
+    <input type="text" id="mileText">
+    <button onclick="addMilestone()">追加</button>
+  </div>
+
+  <div id="deleteArea" class="hidden"></div>
+</div>
+
+<!-- 設定メニュー -->
+<div id="settingMenu" class="setting-menu">
+  <h3>設定</h3>
+  <label>今の偏差値</label>
+  <input type="number" id="setScore">
+
+  <label>すごろく開始日</label>
+  <input type="date" id="setStart">
+
+  <label>試験日</label>
+  <input type="date" id="setExam">
+
+  <button onclick="saveSettings()">保存</button>
+</div>
+
+<button class="gear-btn" onclick="toggleSetting()">⚙️</button>
+
+<div id="board" class="board"></div>
+
+<script>
+let startDate = new Date(localStorage.getItem("startDate") || new Date());
+let examDate  = new Date(localStorage.getItem("examDate") || "2027-02-10");
+let score = localStorage.getItem("score") || 58;
+const today = new Date();
+
+let events = JSON.parse(localStorage.getItem("events") || "{}");
+let milestones = JSON.parse(localStorage.getItem("milestones") || "[]");
+
+/* 上部表示 */
+infoToday.textContent = "今日\n" + today.toLocaleDateString();
+infoExam.textContent = "試験\n" + examDate.toLocaleDateString();
+infoLeft.textContent = "残り\n" + Math.ceil((examDate - today)/86400000) + "日";
+scoreView.textContent = score;
+
+/* 設定初期値 */
+setScore.value = score;
+setStart.value = startDate.toISOString().slice(0,10);
+setExam.value  = examDate.toISOString().slice(0,10);
+
+/* 盤面 */
+const board = document.getElementById("board");
+let lastMonth=null, i=0;
+
+while(true){
+  const d=new Date(startDate);
+  d.setDate(startDate.getDate()+i);
+  if(d>examDate) break;
+
+  if(d.getMonth()!==lastMonth){
+    const m=document.createElement("div");
+    m.className="month";
+    m.textContent=(d.getMonth()+1)+"月";
+    board.appendChild(m);
+    lastMonth=d.getMonth();
+  }
+
+  const cell=document.createElement("div");
+  cell.className="cell "+["snake-left","snake-mid","snake-right"][i%3];
+  const key=d.toISOString().slice(0,10);
+
+  if(events[key]){
+    cell.classList.add("event");
+    cell.textContent=events[key];
+  }
+
+  if(Math.floor((today-startDate)/86400000)===i){
+    const c=document.createElement("div");
+    c.className="character";
+    c.textContent="🧍";
+    cell.appendChild(c);
+  }
+
+  if(d.getTime()===examDate.getTime()){
+    cell.classList.add("goal");
+    cell.textContent="🎓";
+  }
+
+  milestones.forEach(m=>{
+    if(m.date===key){
+      const b=document.createElement("div");
+      b.className="balloon";
+      b.textContent=m.text;
+      cell.appendChild(b);
+    }
+  });
+
+  board.appendChild(cell);
+  i++;
+}
+
+/* 操作系 */
+function toggleMenu(){ sideMenu.classList.toggle("open"); }
+function toggleSetting(){ settingMenu.classList.toggle("open"); }
+
+function saveSettings(){
+  localStorage.setItem("score", setScore.value);
+  localStorage.setItem("startDate", setStart.value);
+  localStorage.setItem("examDate", setExam.value);
+  location.reload();
+}
+
+function changeMode(){
+  addArea.classList.toggle("hidden", modeSelect.value!=="add");
+  deleteArea.classList.toggle("hidden", modeSelect.value!=="delete");
+  if(modeSelect.value==="delete") renderDelete();
+}
+
+function renderDelete(){
+  deleteArea.innerHTML="<h4>削除</h4>";
+  Object.keys(events).forEach(d=>{
+    const div=document.createElement("div");
+    div.className="list-item";
+    div.textContent=`${d}：${events[d]}`;
+    div.onclick=()=>{ delete events[d]; save(); };
+    deleteArea.appendChild(div);
+  });
+}
+
+function save(){
+  localStorage.setItem("events",JSON.stringify(events));
+  localStorage.setItem("milestones",JSON.stringify(milestones));
+  location.reload();
+}
+
+function addEvent(){
+  if(!eventDate.value||!eventType.value) return;
+  events[eventDate.value]=eventType.value;
+  save();
+}
+
+function addMilestone(){
+  if(!mileDate.value||!mileText.value) return;
+  milestones.push({date:mileDate.value,text:mileText.value});
+  save();
+}
+</script>
+
+</body>
+</html>
