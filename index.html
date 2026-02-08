@@ -70,36 +70,27 @@ body {
   text-align: center;
 }
 
-/* 蛇行 */
+.past {
+  background: #eee;
+  border-color: #bbb;
+  color: #888;
+}
+
 .snake-left  { transform: translateY(-6px); }
 .snake-mid   { transform: none; }
 .snake-right { transform: translateY(6px); }
 
-/* イベント（藤色） */
 .event {
   background: linear-gradient(135deg, #e6d9ff, #c7b7ff);
   border-color: #8b78d6;
 }
 
-/* 今日（淡い金色） */
 .today {
   background: linear-gradient(135deg, #fff4cc, #ffe8a3);
   border-color: #f2c94c;
   box-shadow: 0 0 8px rgba(242,201,76,0.6);
 }
 
-/* ゴール */
-.goal {
-  background: #c2f0c2;
-  font-size: 12px;
-}
-
-.character {
-  position: absolute;
-  font-size: 14px;
-}
-
-/* 月表示 */
 .month {
   grid-column: 1 / -1;
   text-align: center;
@@ -108,18 +99,26 @@ body {
   margin: 8px 0 4px;
 }
 
-/* マイルストーン */
 .balloon {
   position: absolute;
-  top: -28px;
+  top: -42px;
   background: #ff7675;
   color: #fff;
-  font-size: 7px;
-  padding: 2px 6px;
-  border-radius: 10px;
+  font-size: 14px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  white-space: nowrap;
 }
 
-/* ===== メニュー ===== */
+.exam-mark {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+}
+
+/* ===== 左メニュー ===== */
 .side-menu {
   position: fixed;
   inset: 0;
@@ -148,6 +147,39 @@ body {
   border-bottom: 1px solid #ccc;
   cursor: pointer;
 }
+
+/* ===== 歯車 ===== */
+.gear-btn {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  font-size: 22px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  z-index: 40;
+}
+
+/* ===== 設定 ===== */
+.setting {
+  position: fixed;
+  inset: 0;
+  background: #f5f5f5;
+  padding: 16px;
+  display: none;
+  z-index: 50;
+}
+.setting.open { display: block; }
+
+.setting input, .setting button {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 8px;
+  font-size: 14px;
+}
 </style>
 </head>
 
@@ -163,6 +195,7 @@ body {
   </div>
 </div>
 
+<!-- 左メニュー -->
 <div id="sideMenu" class="side-menu">
   <h3>イベント・マイルストーン</h3>
 
@@ -171,7 +204,6 @@ body {
     <option value="delete">削除</option>
   </select>
 
-  <!-- 追加 -->
   <div id="addArea">
     <h4>イベント</h4>
     <input type="date" id="eventDate">
@@ -184,14 +216,29 @@ body {
     <button onclick="addMilestone()">追加</button>
   </div>
 
-  <!-- 削除 -->
   <div id="deleteArea" class="hidden"></div>
+
+  <!-- ★ 閉じるボタン（画像と同じ形式） -->
+  <button onclick="toggleMenu()">閉じる</button>
 </div>
 
 <div id="board" class="board"></div>
 
+<button class="gear-btn" onclick="openSetting()">⚙️</button>
+
+<div id="setting" class="setting">
+  <h3>設定</h3>
+  <input type="number" id="setScore">
+  <input type="date" id="setStart">
+  <input type="date" id="setExam">
+  <button onclick="saveSetting()">保存</button>
+  <button onclick="closeSetting()">閉じる</button>
+</div>
+
 <script>
 const today = new Date();
+today.setHours(0,0,0,0);
+
 let startDate = new Date(localStorage.getItem("startDate") || today);
 let examDate = new Date(localStorage.getItem("examDate") || "2027-02-10");
 let score = localStorage.getItem("score") || 58;
@@ -225,12 +272,21 @@ while (true) {
   cell.className = "cell " + ["snake-left","snake-mid","snake-right"][i%3];
   const key = d.toISOString().slice(0,10);
 
+  if (d < today) cell.classList.add("past");
+
   if (events[key]) {
     cell.classList.add("event");
     cell.textContent = events[key];
   }
 
-  if (Math.floor((today-startDate)/86400000) === i) {
+  if (d.getTime() === examDate.getTime()) {
+    const p = document.createElement("div");
+    p.className = "exam-mark";
+    p.textContent = "✏️";
+    cell.appendChild(p);
+  }
+
+  if (Math.floor((today - startDate)/86400000) === i) {
     cell.classList.add("today");
     cell.innerHTML += "🧍";
   }
@@ -292,6 +348,22 @@ function addMilestone() {
 function save() {
   localStorage.setItem("events", JSON.stringify(events));
   localStorage.setItem("milestones", JSON.stringify(milestones));
+  location.reload();
+}
+
+function openSetting() {
+  setScore.value = score;
+  setStart.value = startDate.toISOString().slice(0,10);
+  setExam.value = examDate.toISOString().slice(0,10);
+  setting.classList.add("open");
+}
+function closeSetting() {
+  setting.classList.remove("open");
+}
+function saveSetting() {
+  localStorage.setItem("score", setScore.value);
+  localStorage.setItem("startDate", setStart.value);
+  localStorage.setItem("examDate", setExam.value);
   location.reload();
 }
 </script>
